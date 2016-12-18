@@ -38,6 +38,8 @@ use std::collections::{BTreeMap, btree_map};
 #[cfg(feature = "preserve_order")]
 use linked_hash_map::{self, LinkedHashMap};
 
+use aho_corasick::{AcAutomaton, Automaton};
+
 use std::fmt;
 use std::io;
 use std::str;
@@ -102,6 +104,25 @@ fn parse_index(s: &str) -> Option<usize> {
         return None;
     }
     s.parse().ok()
+}
+
+fn replace_pointer(data: &str) -> String {
+    let keys = ["~1", "~0"];
+    let values = ['/', '~'];
+
+    let aut = AcAutomaton::new(keys.iter()).into_full();
+    let mut matches = aut.find(data);
+    // guessing the needed size approximated to original data
+    let mut result = String::with_capacity(data.len());
+    let mut target_end = 0;
+
+    while let Some(m) = matches.next() {
+        result.push_str(unsafe { data.slice_unchecked(target_end, m.start) });
+        result.push(values[m.pati]);
+        target_end = m.end;
+    }
+    result.push_str(unsafe { data.slice_unchecked(target_end, data.len()) });
+    result
 }
 
 impl Value {
@@ -174,7 +195,7 @@ impl Value {
         if !pointer.starts_with('/') {
             return None;
         }
-        let tokens = pointer.split('/').skip(1).map(|x| x.replace("~1", "/").replace("~0", "~"));
+        let tokens = pointer.split('/').skip(1).map(replace_pointer);
         let mut target = self;
 
         for token in tokens {
@@ -237,7 +258,7 @@ impl Value {
         if !pointer.starts_with('/') {
             return None;
         }
-        let tokens = pointer.split('/').skip(1).map(|x| x.replace("~1", "/").replace("~0", "~"));
+        let tokens = pointer.split('/').skip(1).map(replace_pointer);
         let mut target = self;
 
         for token in tokens {

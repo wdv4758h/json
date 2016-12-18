@@ -143,6 +143,7 @@ extern crate core;
 extern crate serde;
 extern crate itoa;
 extern crate dtoa;
+extern crate aho_corasick;
 #[cfg(feature = "preserve_order")]
 extern crate linked_hash_map;
 
